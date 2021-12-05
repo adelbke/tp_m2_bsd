@@ -77,7 +77,7 @@ exemple de requête:
 - et le serveur fonctionne au port 80 !!!
 - - testez le serveur en entrant ce lien sur votre navigateur http://localhost vous verrez un "hello world"
 
-### Pour les autres utilisateurs docker
+### Pour les autres utilisateurs
   - Installez les dépendances
   ```sh
   export PYTHONDONTWRITEBYTECODE=1 # (optional but its cleaner)
