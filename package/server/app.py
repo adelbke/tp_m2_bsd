@@ -23,9 +23,9 @@ def encrypt():
     # build response
     # 
     # 
+    # raise Exception('this is wrong')
     # 
-    # 
-    return 'response'
+    return algorithm
 
 #  lancer l'application à travers la programmation depuis un autre fichier python
 # from app import app
