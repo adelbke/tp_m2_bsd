@@ -15,6 +15,7 @@ def key_validation(algo:str, key):
     else:
         if type(key) != str:
             raise Exception(f'The key is {type(key)} and it should be {str}')
+    return True
     
 
         
@@ -31,7 +32,7 @@ def validate_encrypt_request(request):
         'sender' : is_string,
         'algorithm': lambda x: is_string(x) and x in algos,
         'message': is_string,
-        'key': lambda x: is_int if request['algorithm'] in number_key_algos else is_string(x)
+        'key': lambda x: key_validation(request['algorithm'],x)
     }
 
     for key in attribute_checker:
