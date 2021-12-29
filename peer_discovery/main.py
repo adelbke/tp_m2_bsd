@@ -8,21 +8,44 @@ class MessageType(Enum):
     INFO = 'INFO'
     EXIT = 'EXT'
 
+def get_own_ip():
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("192.168.1.1", 80))
+        return s.getsockname()[0]
+
+
+class Peer():
+    def __init__(self, address, name:str):
+        self.name = name
+        self.address_pair= address
+        self.ip = self.address_pair[0]
+
+    def __str__(self):
+        return f'ip: {self.ip}, Name: {self.name}'
+
+    def compare(self, peer):
+        return self.ip == peer.ip and self.name == peer.name
+    
+
 class Message():
 
     def __init__(self, data, address=None, encoding='UTF-8'):
-        # data_string = data.decode(encoding)
         if type(data) == bytes:
             self.data = json.loads(data)
         elif type(data) == dict:
             self.data = data
         self.type = MessageType(self.data['type'])
-        self.sender = self.data['sender']
-        if address is not None:
-            self.sender_ip = address
-    
+        # if the address is not set, this message is being set by the peer creating it, otherwise it has been received externally
+        if address is None:
+            address = get_own_ip()
+        # we create the peer of the sender, he's the source of the message
+        self.sender = Peer(address, self.data['sender'])
+
+        
     def __str__(self):
         return str(self.data)
+    
     def sendto(self, address, sock=None, encoding='UTF-8'):
         if sock is None:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -31,53 +54,113 @@ class Message():
             sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
         encoded_data = json.dumps(self.data, indent=2).encode('UTF-8')
         sock.sendto(encoded_data, address)
+    
 
 
 class MulticastDiscovery():
-    multicast_group = ('224.3.29.71', 10000)
-    listening_address = ('0.0.0.0', 10000)
 
-    received_messages = []
-    peers = []
+    def __init__(self, name:str, peers=[], multicast_group=('224.3.29.71', 10000), listening_address=('0.0.0.0', 10000)):
+        self.name = name
+        self._peers = peers
 
-    @classmethod
-    def start(cls, encoding='UTF-8'):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # Receive/respond loop
-        msg = Message({
-            'sender': 'Adel',
-            'type': MessageType.IDENTIFICATION.value,
-            'content': 'Hello world'
-        })
-        msg.sendto(cls.multicast_group)
+        self.multicast_group = multicast_group
+        self.listening_address = listening_address
+        self._listening_state=False
+
+    @property
+    def peers(self):
+        return self._peers
+    
+    @peers.setter
+    def peers(self, value):
+        print(f'New Peer List:')
+        for peer in value:
+            print(peer)
+        self._peers = value
+    
+    def acknowledge(self, address, socket=None):
+        Message({
+            'sender': self.name,
+            'type': MessageType.ACKNOWLEDGEMENT.value
+        }).sendto(address, socket)
+
+    def identification(self, socket=None):
+        Message({
+            'sender': self.name,
+            'type': MessageType.IDENTIFICATION.value
+        }).sendto(self.multicast_group, socket)
+    
+    # def received_message_handler(self, msg):
+    #     pass
+
+    def start(self, encoding='UTF-8'):        
+        self.identification()
+
+        import threading
+
+        listening = threading.Thread(target=self.listen_routine)
+        listening.start()
+
+        listening.join()
+
         
-        # Bind to the server address
-        sock.bind(cls.listening_address)
-        # Tell the operating system to add the socket to the multicast group
-        # on all interfaces.
-        group = socket.inet_aton(cls.multicast_group[0])
-        mreq = struct.pack('4sL', group, socket.INADDR_ANY)
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    
+    def stop(self):
+        self._listening_state = False
 
+    def check_peer(self, peer:Peer, add_if_absent=False, remove_if_found=False):
+        # matched_peers = filter(lambda x: peer.compare(x), self.peers)
+        matched_peers = [idx for idx, x in self.peers if peer.compare(x)]
+                
+        if len(matched_peers) == 0:
+            # we don't have this peer
+            if add_if_absent:
+                print('Added peer ' + str(peer))
+                self.peers.append(peer)
+            return False
+        
+        if remove_if_found:
+            for i in matched_peers:
+                print('removing peer ' + str(self.peers[i]))
+                del self.peers[i]
 
-        print('\nwaiting to receive message')
-        data, address = sock.recvfrom(1024)
-
-        # print('received %s bytes from %s' % (len(data), address))
-        print(f'received Data from {address}')
-        cls.received_messages.append(Message(data,  address[0]))
-        print(cls.received_messages[-1])
-        # print(type(data))
-
-        print('sending acknowledgement to', address)
-        # sock.sendto(bytes('ack', encoding), address)
-        msg = Message({
-            'sender': 'Adel',
-            'type': MessageType.ACKNOWLEDGEMENT.value,
-            'content': 'Hello world'
-        })
-        msg.sendto(address, sock)
-
+        return True
         
 
-MulticastDiscovery.start()
+    def listen_routine(self):
+        self._listening_state=True
+        while self._listening_state:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            # Bind to the server address
+            sock.bind(self.listening_address)
+            # Tell the operating system to add the socket to the multicast group
+            # on all interfaces.
+            group = socket.inet_aton(self.multicast_group[0])
+            mreq = struct.pack('4sL', group, socket.INADDR_ANY)
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+
+            print('\nwaiting to receive message')
+            data, address = sock.recvfrom(1024)
+            
+            received_msg = Message(data, address)
+            # if callback is not None and hasattr(callback, '__call__'):
+            #     callback(received_msg)
+            
+            # if we receive an identification Message
+            if received_msg.type == MessageType.IDENTIFICATION:
+                # we check if the peer that send the message exists within our list
+                print(f'received message: \n {received_msg}')
+                self.check_peer(received_msg.sender, add_if_absent=True)
+                # we reply with ackgnowledgement
+                self.acknowledge(received_msg.sender.address_pair, socket=sock)
+
+            if received_msg.type == MessageType.ACKNOWLEDGEMENT:
+                self.check_peer(received_msg.sender, add_if_absent=True)
+            
+            if received_msg.type == MessageType.EXIT:
+                self.check_peer(received_msg.sender,remove_if_found=True)
+                
+    
+
+MulticastDiscovery('Adel PC').start()
