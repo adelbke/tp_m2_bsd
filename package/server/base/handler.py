@@ -15,8 +15,14 @@ def key_validation(algo:str, key):
     else:
         if type(key) != str:
             raise Exception(f'The key is {type(key)} and it should be {str}')
+        
+        elif algo == 'substitution':
+                list_key = list(''.join([j for i,j in enumerate(key) if j not in key[:i]]))
+                if len(list_key) !=26:
+                    raise Exception('Ciphertext Alphabet must be of length 26 of unique charcters.')
+            
+        
     return True
-    
 
         
 

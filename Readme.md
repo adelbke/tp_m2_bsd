@@ -135,7 +135,8 @@ def encrypt():
 
 ```
 
-##  For pyqt5 users
+##  Pour les utilisateurs de pyqt5
+
 
 Tous les fichiers nécessaires se trouvent dans  tp_m2_bsd\package\server\pyqt_integration
 
@@ -143,7 +144,7 @@ Pour démarrer importer ou copier la classe Server_Worker dans le même fichier 
 ce serveur est le même adel a écrite mais il est fait de manière à fonctionner avec pyqt5
 
 ```python
-# add this at the beging of your main file code in case of some import error change the import to what works for you
+# add this at the beging of your main file code 
 from flask import Flask, request,current_app
 from handler import validate_encrypt_request 
 from PyQt5 import QtCore
@@ -154,7 +155,6 @@ class Server_Worker(QtCore.QObject):
 
     def __init__(self):
         super().__init__()
-        self.Stat = False
     
 
     @app.route("/")
@@ -176,31 +176,21 @@ class Server_Worker(QtCore.QObject):
         return requestJson
 
     def run(self):
-        self.Stat = True
         self.app.config['obj'] = self
         self.app.run(port=3000)
-    def stop(self):
-        self.Stat = False
-
-```
-
-après cela, vous devez exécuter l'objet Server_Worker dans un thread en liant la fonction p2p_even_recive à un événement de boutton. Cette fonction doit être définie dans votre classe QMainWindow
-
-```python
-def p2p_even_recive(self):
-    # add this in your QMainWindow class and connect it the btn that is going to start the server for the peer2peer conection
-    if self.server_worker.Stat == False:
-        self.server_worker.moveToThread(self.thread)
-        self.thread.started.connect(self.server_worker.run)
-        self.server_worker.res.connect(self.p)
-        self.thread.start()
 ```
 
 Ensuite, dans votre fonction \_\_init\_\_ dans la classe QMainWindow, ajoutez ceci
+
 ```python
 self.server_worker = Server_Worker()
 self.thread = QtCore.QThread()
+self.server_worker.moveToThread(self.thread)
+self.thread.started.connect(self.server_worker.run)
+self.server_worker.res.connect(self.p)
+self.thread.start()
 ```
+ajoutez cette fonction à votre classe QMainWindow redéfinissez la selon vos besoins, elle devrait mettre à jour l'interface,(**n'oubliez pas de déchiffrer le texte**).
 
 ```python
 def p(self,val):
@@ -212,3 +202,61 @@ la variable val est un dictionnaire python avec une structure similaire à celle
 ```python
 {'sender': 'yacine', 'algorithm': 'ceasar', 'message': 'Hello World', 'key': 6, 'type': 'encrypt'}
 ```
+
+# peer_discovery
+
+
+Toutes les fonctions peuvent être trouvées dans le fichier tp_m2_bsd/package/server/peer_discovery.py 
+
+dans ce fichier, vous trouverez les fonctions nécessaires à votre identification ainsi qu'à l'identification d'autres personnes en plus de la fonction d'envoi des données à votre destination.
+
+### get_gatway_ip()
+
+cette fonction permet d'obtenir l'adresse IP de la passerelle par défaut (gatway)
+```python
+def get_gatway_ip():
+    gateways = netifaces.gateways()
+    defaults = gateways.get("default")
+    return defaults[2][0]
+```
+### request()
+
+cette fonction est utilisée à la fois pour vous identifier ainsi que pour obtenir des informations sur d'autres peer
+```python
+def request(name,state=False):
+    data = {'name':name,'active':state}
+    x = requests.post(f"http://{get_gatway_ip()}:3000",json=data)
+    if x.status_code == 200:
+        return x.text
+    else:
+        return -1
+```
+
+pour l'utiliser il suffit de spécifier votre nom dans le réseau et votre état dans le réseau
+
+- state = False: signifie que je veux m'identifier mais je ne veux pas recevoir de données de qui que ce soit.
+
+- state = True: signifie que je veux m'identifier et que je suis prêt à recevoir des données d'autres peer
+
+lorsque vous envoyez la demande, une réponse sera renvoyée par le serveur si le code de réponse est 200 cela signifie que la demande a réussi et la fonction renverra une chaîne json similaire à cette structure
+
+```json
+```
+sinon la fonction retournera -1
+
+### send_data()
+
+cette fonction est utilisée pour envoyer des données à d'autres peer (vous n'êtes pas obligé de l'utiliser, vous pouvez écrire la votre).
+
+<br />
+
+assurez-vous simplement d'appeler cette fonction avec tous les bons arguments et vérifiez si le code de retour est 200, si c'est le cas, cela signifie que vous êtes bon, les informations que vous avez envoyées ont été reçues et le serveur de destination a répondu. tout autre code signifie que la demande n'a pas été faite correctement.
+```python
+def send_data(ip,sender,algo,msg,key):
+    data = {"sender": sender ,"algorithm": algo ,"message": msg ,"key": key ,"type": "encrypt"}
+    url = f'http://{ip}:3000/encrypt'
+    x = requests.post(url, json=data)
+    return x.status_code
+```
+
+

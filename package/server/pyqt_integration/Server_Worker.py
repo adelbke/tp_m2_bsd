@@ -9,7 +9,6 @@ class Server_Worker(QtCore.QObject):
 
     def __init__(self):
         super().__init__()
-        self.Stat = False
     
 
     @app.route("/")
@@ -31,8 +30,6 @@ class Server_Worker(QtCore.QObject):
         return requestJson
 
     def run(self):
-        self.Stat = True
         self.app.config['obj'] = self
         self.app.run(port=3000)
-    def stop(self):
-        self.Stat = False
+    
