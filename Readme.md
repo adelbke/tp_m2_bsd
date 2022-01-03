@@ -89,9 +89,9 @@ exemple de requête:
   - lancez le serveur
   ```bash
   flask run 
-  # ajoutez "--port {numéro du port}" pour changer le port par défaut (5000)
+  # ajoutez "--port {numéro du port}" pour changer le port par défaut (3000)
   ```
-  - testez le serveur en entrant ce lien sur votre navigateur http://localhost:5000 vous trouverez un "hello world"
+  - testez le serveur en entrant ce lien sur votre navigateur http://localhost:3000 vous trouverez un "hello world"
 
 ## utilisation
 
@@ -129,10 +129,6 @@ def encrypt():
     # 
     # 
     return 'response'
-
-
-
-
 ```
 
 ##  Pour les utilisateurs de pyqt5
@@ -215,21 +211,25 @@ dans ce fichier, vous trouverez les fonctions nécessaires à votre identificati
 cette fonction permet d'obtenir l'adresse IP de la passerelle par défaut (gatway)
 ```python
 def get_gatway_ip():
-    gateways = netifaces.gateways()
-    defaults = gateways.get("default")
-    return defaults[2][0]
+    try:
+        gateways = netifaces.gateways()
+        defaults = gateways.get("default")
+        return defaults[2][0]
+    except:
+        raise Exception('make sure you are online...')
 ```
+
 ### request()
 
 cette fonction est utilisée à la fois pour vous identifier ainsi que pour obtenir des informations sur d'autres peer
 ```python
 def request(name,state=False):
-    data = {'name':name,'active':state}
-    x = requests.post(f"http://{get_gatway_ip()}:3000",json=data)
-    if x.status_code == 200:
-        return x.text
-    else:
-        return -1
+  data = {'name':name,'active':state}
+  x = requests.post(f"http://{get_gatway_ip()}:3000/get-peers",json=data)
+  if x.status_code == 200:
+    return extract_list_of_users(x.json())
+  else:
+    return []
 ```
 
 pour l'utiliser il suffit de spécifier votre nom dans le réseau et votre état dans le réseau
@@ -241,8 +241,31 @@ pour l'utiliser il suffit de spécifier votre nom dans le réseau et votre état
 lorsque vous envoyez la demande, une réponse sera renvoyée par le serveur si le code de réponse est 200 cela signifie que la demande a réussi et la fonction renverra une chaîne json similaire à cette structure
 
 ```json
+[{"ip":"10.42.0.12","name":"Yacine","active":false}]
 ```
-sinon la fonction retournera -1
+sinon la fonction retournera une list vide
+
+### extract_list_of_users()
+
+transformer de la list des peers
+```python
+[{"ip":"10.42.0.12","name":"Yacine","active":false}] 
+=>>> {"10.42.0.12" :"Yacine"}
+```
+
+```python
+def extract_list_of_users(peer_data):
+        temp_list = {}
+        if peer_data == []:
+                return temp_list
+        else:
+                for user in peer_data:
+                        if user['active'] == True:
+                                temp_list[user['ip']] = user['name']
+        return temp_list
+```
+
+
 
 ### send_data()
 
