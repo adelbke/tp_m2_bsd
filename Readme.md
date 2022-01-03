@@ -202,7 +202,7 @@ la variable val est un dictionnaire python avec une structure similaire à celle
 # peer_discovery
 
 
-Toutes les fonctions peuvent être trouvées dans le fichier tp_m2_bsd/package/server/peer_discovery.py 
+Toutes les fonctions peuvent être trouvées dans le fichier **tp_m2_bsd/package/server/peer_discovery.py** 
 
 dans ce fichier, vous trouverez les fonctions nécessaires à votre identification ainsi qu'à l'identification d'autres personnes en plus de la fonction d'envoi des données à votre destination.
 
@@ -224,12 +224,15 @@ def get_gatway_ip():
 cette fonction est utilisée à la fois pour vous identifier ainsi que pour obtenir des informations sur d'autres peer
 ```python
 def request(name,state=False):
-  data = {'name':name,'active':state}
-  x = requests.post(f"http://{get_gatway_ip()}:3000/get-peers",json=data)
-  if x.status_code == 200:
-    return extract_list_of_users(x.json())
-  else:
-    return []
+        data = {'name':name,'active':state}
+        try:
+                x = requests.post(f"http://{get_gatway_ip()}:3000/get-peers",json=data)
+                if x.status_code == 200:
+                        return extract_list_of_users(x.json())
+                else:
+                        return {}
+        except:
+                return {}
 ```
 
 pour l'utiliser il suffit de spécifier votre nom dans le réseau et votre état dans le réseau
@@ -243,7 +246,7 @@ lorsque vous envoyez la demande, une réponse sera renvoyée par le serveur si l
 ```json
 [{"ip":"10.42.0.12","name":"Yacine","active":false}]
 ```
-sinon la fonction retournera une list vide
+sinon la fonction retournera une dictionnaire vide
 
 ### extract_list_of_users()
 
@@ -276,10 +279,13 @@ cette fonction est utilisée pour envoyer des données à d'autres peer (vous n'
 assurez-vous simplement d'appeler cette fonction avec tous les bons arguments et vérifiez si le code de retour est 200, si c'est le cas, cela signifie que vous êtes bon, les informations que vous avez envoyées ont été reçues et le serveur de destination a répondu. tout autre code signifie que la demande n'a pas été faite correctement.
 ```python
 def send_data(ip,sender,algo,msg,key):
-    data = {"sender": sender ,"algorithm": algo ,"message": msg ,"key": key ,"type": "encrypt"}
-    url = f'http://{ip}:3000/encrypt'
-    x = requests.post(url, json=data)
-    return x.status_code
+        data = {"sender": sender ,"algorithm": algo ,"message": msg ,"key": key ,"type": "encrypt"}
+        url = f'http://{ip}:3000/encrypt'
+        try:
+                x = requests.post(url, json=data)
+                return x.status_code
+        except:
+                return -1
 ```
 
 
