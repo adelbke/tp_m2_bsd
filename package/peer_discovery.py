@@ -9,26 +9,19 @@ def get_gatway_ip():
     except:
             raise Exception('make sure you are online...')
 
-def request(name,state=False):
-        data = {'name':name,'active':state}
+def request(name):
+        data = {'name':name,'active':True}
         try:
                 x = requests.post(f"http://{get_gatway_ip()}:3000/get-peers",json=data)
                 if x.status_code == 200:
-                        return extract_list_of_users(x.json())
+                        return x.json()
                 else:
-                        return {}
-        except:
-                return {}
+                        return []
+        except Exception as e:
+                print(e)
+                return []
 
-def extract_list_of_users(peer_data):
-        temp_list = {}
-        if len(peer_data) == []:
-                return temp_list
-        else:
-                for user in peer_data:
-                        if user['active'] == True:
-                                temp_list[user['ip']] = user['name']
-        return temp_list
+
 
 def send_data(ip,sender,algo,msg,key):
         data = {"sender": sender ,"algorithm": algo ,"message": msg ,"key": key ,"type": "encrypt"}
@@ -36,7 +29,8 @@ def send_data(ip,sender,algo,msg,key):
         try:
                 x = requests.post(url, json=data)
                 return x.status_code
-        except:
+        except Exception as e:
+                print(e)
                 return -1
     
 

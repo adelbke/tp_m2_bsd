@@ -173,7 +173,7 @@ class Server_Worker(QtCore.QObject):
 
     def run(self):
         self.app.config['obj'] = self
-        self.app.run(port=3000)
+        self.app.run(host='0.0.0.0',port=3000)
 ```
 
 Ensuite, dans votre fonction \_\_init\_\_ dans la classe QMainWindow, ajoutez ceci
@@ -223,52 +223,27 @@ def get_gatway_ip():
 
 cette fonction est utilisée à la fois pour vous identifier ainsi que pour obtenir des informations sur d'autres peer
 ```python
-def request(name,state=False):
-        data = {'name':name,'active':state}
+def request(name):
+        data = {'name':name,'active':True}
         try:
-                x = requests.post(f"http://{get_gatway_ip()}:3000/get-peers",json=data)
-                if x.status_code == 200:
-                        return extract_list_of_users(x.json())
-                else:
-                        return {}
-        except:
-                return {}
+            x = requests.post(f"http://{get_gatway_ip()}:3000/get-peers",json=data)
+            if x.status_code == 200:
+                    return x.json()
+            else:
+                    return []
+        except Exception as e:
+            print(e)
+            return []
 ```
 
-pour l'utiliser il suffit de spécifier votre nom dans le réseau et votre état dans le réseau
-
-- state = False: signifie que je veux m'identifier mais je ne veux pas recevoir de données de qui que ce soit.
-
-- state = True: signifie que je veux m'identifier et que je suis prêt à recevoir des données d'autres peer
+pour l'utiliser il suffit de spécifier votre nom dans le réseau.
 
 lorsque vous envoyez la demande, une réponse sera renvoyée par le serveur si le code de réponse est 200 cela signifie que la demande a réussi et la fonction renverra une chaîne json similaire à cette structure
 
 ```json
-[{"ip":"10.42.0.12","name":"Yacine","active":false}]
+[{"ip":"10.42.0.12","name":"Yacine","active":True}]
 ```
-sinon la fonction retournera une dictionnaire vide
-
-### extract_list_of_users()
-
-transformer de la list des peers
-```python
-[{"ip":"10.42.0.12","name":"Yacine","active":false}] 
-=>>> {"10.42.0.12" :"Yacine"}
-```
-
-```python
-def extract_list_of_users(peer_data):
-        temp_list = {}
-        if peer_data == []:
-                return temp_list
-        else:
-                for user in peer_data:
-                        if user['active'] == True:
-                                temp_list[user['ip']] = user['name']
-        return temp_list
-```
-
-
+sinon la fonction retournera une List vide
 
 ### send_data()
 
@@ -284,8 +259,10 @@ def send_data(ip,sender,algo,msg,key):
         try:
                 x = requests.post(url, json=data)
                 return x.status_code
-        except:
+        except Exception as e:
+                print(e)
                 return -1
 ```
 
-
+## Drawings Example
+![alt text](/package/exp.png)

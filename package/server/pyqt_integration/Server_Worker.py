@@ -31,5 +31,5 @@ class Server_Worker(QtCore.QObject):
 
     def run(self):
         self.app.config['obj'] = self
-        self.app.run(port=3000)
+        self.app.run(host='0.0.0.0',port=3000)
     

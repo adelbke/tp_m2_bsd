@@ -29,4 +29,4 @@ def encrypt():
 
 #  lancer l'application à travers la programmation depuis un autre fichier python
 # from app import app
-# app.run(port=3000)
+# app.run(host='0.0.0.0',port=3000)
