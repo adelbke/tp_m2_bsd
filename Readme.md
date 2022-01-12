@@ -1,5 +1,10 @@
 # Documentation Projet Sécurité
 
+**alphabet autorisé**
+
+* abcdefghijklmnopqrstuvwxyz 
+* minuscule*
+
 ## Sommaire
 
 - [Standard de requête](#standard-de-requête)
